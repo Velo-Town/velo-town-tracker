@@ -1,0 +1,2203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velo Town Job Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #8B9D83 0%, #6B7C63 100%);
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(139, 157, 131, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(107, 124, 99, 0.3) 0%, transparent 50%),
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="noise"><feTurbulence baseFrequency="0.9" numOctaves="4"/></filter><rect width="100" height="100" filter="url(%23noise)" opacity="0.05"/></svg>');
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .logo-text {
+            font-size: 1.8em;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            color: #3D4437;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.3);
+            font-family: 'Georgia', serif;
+        }
+
+        .logo-text .painting {
+            font-family: 'Georgia', serif;
+            font-style: italic;
+            font-weight: 400;
+            font-size: 0.65em;
+            letter-spacing: 0.05em;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .add-job-btn {
+            background: linear-gradient(135deg, #C07A5C 0%, #A8684A 100%);
+            border: none;
+            padding: 16px 32px;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 
+                3px 3px 10px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            transition: transform 0.1s, box-shadow 0.1s;
+            color: white;
+            order: 2;
+        }
+
+        .view-toggle-btn {
+            background: #A8B69B;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 
+                3px 3px 8px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            transition: transform 0.1s, box-shadow 0.1s;
+            color: #3D4437;
+        }
+
+        .view-toggle-btn:first-of-type {
+            order: 1;
+        }
+
+        .view-toggle-btn:last-of-type {
+            order: 3;
+        }
+
+        .view-toggle-btn.active {
+            background: #7D8E73;
+            color: white;
+        }
+
+        .add-job-btn:hover, .view-toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                4px 4px 12px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .add-job-btn:active, .view-toggle-btn:active {
+            transform: translateY(0);
+            box-shadow: 
+                2px 2px 4px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        /* Pipeline View Styles */
+        .board {
+            display: flex;
+            gap: 15px;
+            max-width: 100%;
+            margin: 0 auto;
+            overflow-x: auto;
+            align-items: flex-start;
+        }
+
+        .board.hidden {
+            display: none;
+        }
+
+        .column {
+            flex: 1;
+            min-width: 180px;
+            max-width: 240px;
+            background: rgba(168, 182, 155, 0.25);
+            border-radius: 12px;
+            padding: 10px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .column.declined {
+            background: rgba(125, 142, 115, 0.3);
+            max-width: 200px;
+        }
+
+        .column.hidden {
+            display: none;
+        }
+
+        .declined-toggle {
+            width: 8px;
+            min-width: 8px;
+            max-width: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: rgba(168, 182, 155, 0.4);
+            border-radius: 4px;
+            transition: all 0.2s;
+            font-size: 12px;
+            color: #5C6952;
+            padding: 8px 0;
+            user-select: none;
+        }
+
+        .declined-toggle:hover {
+            background: rgba(168, 182, 155, 0.6);
+            transform: scale(1.1);
+        }
+
+        .column-header {
+            background: linear-gradient(135deg, #A8B69B 0%, #91A089 100%);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            position: relative;
+            box-shadow: 
+                0 4px 6px rgba(0,0,0,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .column-header h2 {
+            font-size: 16px;
+            color: #3D4437;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .column-content {
+            min-height: 400px;
+            padding: 10px 5px;
+        }
+
+        .job-card {
+            background: linear-gradient(135deg, #F5F3E7 0%, #EBE7D5 100%);
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            cursor: move;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 
+                3px 3px 8px rgba(0,0,0,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.7);
+            border-left: 4px solid #7D8E73;
+            position: relative;
+        }
+
+        .job-card:hover {
+            transform: translateY(-3px) rotate(-1deg);
+            box-shadow: 
+                5px 5px 15px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.7);
+        }
+
+        .job-card.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+
+        .job-card h3 {
+            font-size: 16px;
+            color: #3D4437;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .job-card p {
+            font-size: 14px;
+            color: #5C6952;
+        }
+
+        .job-card .scheduled-info {
+            font-size: 12px;
+            color: #7D8E73;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        .column-content.drag-over {
+            background: rgba(125, 142, 115, 0.3);
+            border-radius: 8px;
+        }
+
+        /* Calendar View Styles */
+        .calendar-view {
+            display: none;
+            background: rgba(168, 182, 155, 0.25);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .calendar-view.active {
+            display: block;
+        }
+
+        .calendar-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .calendar-nav button {
+            background: #A8B69B;
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #3D4437;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .calendar-nav button:hover {
+            background: #91A089;
+        }
+
+        .calendar-month-label {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3D4437;
+            min-width: 180px;
+            text-align: center;
+        }
+
+        /* Sticky day-of-week header */
+        .calendar-dow-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            background: rgba(168,182,155,0.3);
+            border-radius: 8px 8px 0 0;
+            padding: 6px 6px 4px 6px;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .calendar-dow-cell {
+            text-align: center;
+            font-weight: 700;
+            color: #3D4437;
+            font-size: 12px;
+            padding: 4px 0;
+        }
+
+        /* Scrollable container */
+        .calendar-scroll-outer {
+            background: white;
+            border-radius: 0 0 8px 8px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+            max-height: 68vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Inner scroll area that holds all month blocks */
+        .calendar-scroll-inner {
+            padding: 0 6px 12px 6px;
+        }
+
+        /* Month section divider */
+        .calendar-month-section {
+            margin-top: 0;
+        }
+
+        .calendar-month-heading {
+            font-size: 14px;
+            font-weight: 700;
+            color: #7D8E73;
+            padding: 10px 4px 4px 4px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(125,142,115,0.2);
+            margin-bottom: 4px;
+        }
+
+        .calendar-month-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            position: relative;
+        }
+
+        /* Individual day cell */
+        .calendar-day {
+            min-height: 90px;
+            background: #F5F3E7;
+            border-radius: 5px;
+            padding: 4px 3px 3px 3px;
+            position: relative;
+            border: 2px solid transparent;
+            transition: border-color 0.15s, background 0.15s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .calendar-day:hover {
+            border-color: #A8B69B;
+            background: #fff;
+        }
+
+        .calendar-day.drag-over {
+            background: #E8F0E3 !important;
+            border-color: #7D8E73 !important;
+        }
+
+        .calendar-day.today {
+            background: #E8F0E3;
+            border-color: #7D8E73;
+        }
+
+        .calendar-day.weekend {
+            background: #EDEBE0;
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.25;
+            pointer-events: none;
+        }
+
+        .calendar-day-number {
+            font-weight: 700;
+            color: #3D4437;
+            font-size: 11px;
+            margin-bottom: 3px;
+            line-height: 1;
+        }
+
+        .calendar-day.today .calendar-day-number {
+            background: #7D8E73;
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Job bars inside day cells */
+        .calendar-jobs-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
+        }
+
+        .calendar-job {
+            background: linear-gradient(90deg, #7D8E73 0%, #91A089 100%);
+            color: white;
+            padding: 2px 5px 2px 5px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: grab;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+            position: relative;
+            user-select: none;
+            min-height: 20px;
+            display: flex;
+            align-items: center;
+            transition: box-shadow 0.1s, opacity 0.1s;
+            border-left: 3px solid #5C6952;
+        }
+
+        .calendar-job.is-start {
+            border-radius: 3px 0 0 3px;
+        }
+
+        .calendar-job.is-end {
+            border-radius: 0 3px 3px 0;
+        }
+
+        .calendar-job.is-start.is-end {
+            border-radius: 3px;
+        }
+
+        .calendar-job.continuation {
+            background: linear-gradient(90deg, #91A089 0%, #A8B69B 100%);
+            border-left: none;
+            opacity: 0.85;
+        }
+
+        .calendar-job:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+            z-index: 10;
+        }
+
+        .calendar-job.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+
+        /* Resize handle on the right edge of the END segment only */
+        .calendar-job-resize-handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            cursor: ew-resize;
+            background: rgba(255,255,255,0.35);
+            border-radius: 0 3px 3px 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .calendar-job.is-end .calendar-job-resize-handle {
+            display: flex;
+        }
+
+        .calendar-job:hover .calendar-job-resize-handle {
+            background: rgba(255,255,255,0.55);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #F5F3E7 0%, #EBE7D5 100%);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 
+                0 20px 60px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.7);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #A8B69B;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            color: #3D4437;
+        }
+
+        .close-btn {
+            background: #7D8E73;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+
+        .close-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .job-details {
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .job-details-left {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .job-details-right {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex-shrink: 0;
+            margin-top: 8px;
+        }
+
+        .job-metric {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .job-metric label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #7D8E73;
+            min-width: auto;
+        }
+
+        .job-metric input {
+            width: 70px;
+            padding: 4px 6px;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #3D4437;
+            background: transparent;
+            text-align: right;
+            transition: all 0.2s;
+        }
+
+        .job-metric input:focus {
+            outline: none;
+            background: white;
+            border-color: #A8B69B;
+        }
+
+        /* Remove number input arrows */
+        .job-metric input[type="number"]::-webkit-inner-spin-button,
+        .job-metric input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .job-metric input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .job-details h3 {
+            font-size: 20px;
+            color: #3D4437;
+            margin-bottom: 5px;
+        }
+
+        .job-details p {
+            font-size: 16px;
+            color: #5C6952;
+        }
+
+        .editable-title {
+            width: 100%;
+            font-size: 20px;
+            font-weight: 700;
+            color: #3D4437;
+            border: 2px solid transparent;
+            border-radius: 5px;
+            background: transparent;
+            padding: 3px 6px;
+            margin-bottom: 6px;
+            transition: all 0.2s;
+        }
+
+        .editable-address {
+            width: 100%;
+            font-size: 15px;
+            color: #5C6952;
+            border: 2px solid transparent;
+            border-radius: 5px;
+            background: transparent;
+            padding: 3px 6px;
+            transition: all 0.2s;
+        }
+
+        .editable-title:hover, .editable-address:hover { border-color: #d0d9c8; background: rgba(255,255,255,0.5); }
+        .editable-title:focus, .editable-address:focus { outline: none; border-color: #A8B69B; background: white; }
+
+        .notes-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(168,182,155,0.15);
+            border-radius: 8px;
+        }
+
+        .notes-section h4 { font-size: 15px; color: #3D4437; margin-bottom: 8px; font-weight: 600; }
+
+        .notes-section textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 2px solid #d0d9c8;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            color: #3D4437;
+            background: white;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        .notes-section textarea:focus { outline: none; border-color: #A8B69B; }
+
+        .checklist {
+            margin-top: 20px;
+        }
+
+        .checklist h4 {
+            font-size: 18px;
+            color: #3D4437;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .checklist-item:hover {
+            background: rgba(255,255,255,0.8);
+        }
+
+        .checklist-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+
+        .checklist-item label {
+            flex: 1;
+            font-size: 15px;
+            color: #3D4437;
+            cursor: pointer;
+        }
+
+        .checklist-item input[type="checkbox"]:checked + label {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .date-section {
+            margin-top: 25px;
+            padding: 15px;
+            background: rgba(168, 182, 155, 0.2);
+            border-radius: 8px;
+        }
+
+        .date-section h4 {
+            font-size: 16px;
+            color: #3D4437;
+            margin-bottom: 10px;
+        }
+
+        .date-section input[type="date"],
+        .date-section input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #A8B69B;
+            border-radius: 6px;
+            font-size: 15px;
+            background: white;
+            margin-bottom: 10px;
+        }
+
+        .delete-btn {
+            margin-top: 20px;
+            background: #9B6B6B;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+            transition: background 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #8A5A5A;
+        }
+
+        /* New Job Form */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #3D4437;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #A8B69B;
+            border-radius: 6px;
+            font-size: 15px;
+            background: white;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: #7D8E73;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #6D7D63;
+        }
+
+        .btn-secondary {
+            background: #A8B69B;
+            color: #3D4437;
+        }
+
+        .btn-secondary:hover {
+            background: #91A089;
+        }
+
+        .delete-confirm-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-confirm-modal.active {
+            display: flex;
+        }
+
+        .delete-confirm-content {
+            background: #F5F3E7;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .delete-confirm-content h3 {
+            color: #3D4437;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .delete-confirm-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .delete-confirm-actions button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-confirm-delete {
+            background: #9B6B6B;
+            color: white;
+        }
+
+        .btn-cancel-delete {
+            background: #A8B69B;
+            color: #3D4437;
+        }
+
+        .job-card.drag-above {
+            border-top: 3px solid #C07A5C;
+        }
+
+        @media (max-width: 1200px) {
+            .board {
+                overflow-x: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .board {
+                overflow-x: auto;
+            }
+            
+            .column {
+                min-width: 160px;
+            }
+        }
+    </style>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, setDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCU-INHFwxttSGxFVzyqq4DaMgGMK1S6Y4",
+            authDomain: "velo-town-job-tracker.firebaseapp.com",
+            projectId: "velo-town-job-tracker",
+            storageBucket: "velo-town-job-tracker.firebasestorage.app",
+            messagingSenderId: "393602034352",
+            appId: "1:393602034352:web:657eceeacb2c841dbd6975"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db  = getFirestore(app);
+
+        // Expose Firestore helpers to the global scope so the main script can use them
+        window._db          = db;
+        window._fsCollection = collection;
+        window._fsGetDocs    = getDocs;
+        window._fsSetDoc     = setDoc;
+        window._fsDeleteDoc  = deleteDoc;
+        window._fsDoc        = doc;
+
+        // Signal that Firebase is ready
+        window.dispatchEvent(new Event('firebaseReady'));
+    </script>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-title">
+            <div class="logo-text">
+                VELO · TOWN<br>
+                <span class="painting">painting</span>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="view-toggle-btn active" onclick="switchView('pipeline')">Pipeline View</button>
+            <button class="add-job-btn" onclick="showNewJobModal()">+ Add New Job</button>
+            <button class="view-toggle-btn" onclick="switchView('calendar')">Calendar View</button>
+        </div>
+        <div style="text-align: center; margin-top: -10px; margin-bottom: 20px; display: flex; gap: 10px; justify-content: center;">
+            <button onclick="exportJobs()" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.6); font-size: 11px; cursor: pointer; padding: 5px 12px; border-radius: 5px;">⬇ Export Jobs</button>
+            <button onclick="document.getElementById('importFileInput').click()" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.6); font-size: 11px; cursor: pointer; padding: 5px 12px; border-radius: 5px;">⬆ Import Jobs</button>
+            <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importJobs(event)">
+        </div>
+    </div>
+
+    <!-- Pipeline View -->
+    <div class="board" id="pipelineView">
+        <div class="column">
+            <div class="column-header">
+                <h2>Initial Contact</h2>
+            </div>
+            <div class="column-content" data-stage="initialContact"></div>
+        </div>
+
+        <div class="column">
+            <div class="column-header">
+                <h2>Quote Visit</h2>
+            </div>
+            <div class="column-content" data-stage="quoteVisit"></div>
+        </div>
+
+        <div class="column">
+            <div class="column-header" style="display:flex;justify-content:center;align-items:center;position:relative;padding-right:24px;">
+                <h2 style="flex:1;text-align:center;">Waiting for Decision</h2>
+                <div onclick="toggleHiddenColumns()" title="Show/Hide Declined Columns" style="position:absolute;right:8px;width:12px;height:20px;background:rgba(93,105,82,0.5);border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+                    <span id="hiddenChevron">›</span>
+                </div>
+            </div>
+            <div class="column-content" data-stage="waitingForDecision"></div>
+        </div>
+
+        <div class="column declined hidden" id="declinedColumn">
+            <div class="column-header">
+                <h2>Declined</h2>
+            </div>
+            <div class="column-content" data-stage="declined"></div>
+        </div>
+
+        <div class="column declined hidden" id="followupColumn">
+            <div class="column-header">
+                <h2>Follow-up Next Season</h2>
+            </div>
+            <div class="column-content" data-stage="followupNextSeason"></div>
+        </div>
+
+        <div class="column">
+            <div class="column-header">
+                <h2>Preparation</h2>
+            </div>
+            <div class="column-content" data-stage="preparation"></div>
+        </div>
+
+        <div class="column">
+            <div class="column-header">
+                <h2>Scheduled</h2>
+            </div>
+            <div class="column-content" data-stage="scheduled"></div>
+        </div>
+
+        <div class="column">
+            <div class="column-header">
+                <h2>Production</h2>
+            </div>
+            <div class="column-content" data-stage="production"></div>
+        </div>
+
+        <div class="column">
+            <div class="column-header" style="display:flex;justify-content:center;align-items:center;position:relative;">
+                <h2 style="flex:1;text-align:center;">Wrap-up</h2>
+                <div onclick="toggleArchived()" title="Show/Hide Archived" style="position:absolute;right:8px;width:12px;height:20px;background:rgba(93,105,82,0.5);border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                    <span id="archivedChevron">›</span>
+                </div>
+            </div>
+            <div class="column-content" data-stage="wrapup"></div>
+        </div>
+
+        <div class="column declined hidden" id="archivedColumn">
+            <div class="column-header">
+                <h2>Archived</h2>
+            </div>
+            <div class="column-content" data-stage="archived"></div>
+        </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div class="calendar-view" id="calendarView">
+        <div class="calendar-controls">
+            <div class="calendar-nav">
+                <button onclick="scrollToToday()">Today</button>
+            </div>
+            <div class="calendar-month-label" id="calendarMonthLabel">Loading...</div>
+            <div style="width:80px"></div>
+        </div>
+        <div class="calendar-dow-header">
+            <div class="calendar-dow-cell">Sun</div>
+            <div class="calendar-dow-cell">Mon</div>
+            <div class="calendar-dow-cell">Tue</div>
+            <div class="calendar-dow-cell">Wed</div>
+            <div class="calendar-dow-cell">Thu</div>
+            <div class="calendar-dow-cell">Fri</div>
+            <div class="calendar-dow-cell">Sat</div>
+        </div>
+        <div class="calendar-scroll-outer" id="calendarScrollOuter">
+            <div class="calendar-scroll-inner" id="calendarScrollInner"></div>
+        </div>
+    </div>
+
+    <!-- Job Detail Modal -->
+    <div class="modal" id="jobModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Job Details</h2>
+                <button class="close-btn" onclick="closeJobModal()">×</button>
+            </div>
+            <div id="jobModalBody"></div>
+        </div>
+    </div>
+
+    <!-- New Job Modal -->
+    <div class="modal" id="newJobModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Job</h2>
+                <button class="close-btn" onclick="closeNewJobModal()">×</button>
+            </div>
+            <div id="newJobForm">
+                <div class="form-group">
+                    <label for="jobTitle">Job Title / Client Name</label>
+                    <input type="text" id="jobTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="jobAddress">Address (optional)</label>
+                    <input type="text" id="jobAddress">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" onclick="addNewJob()">Add Job</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeNewJobModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal" id="exportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Export Jobs</h2>
+                <button class="close-btn" onclick="closeExportModal()">×</button>
+            </div>
+            <p style="font-size:14px; color:#5C6952; margin-bottom:12px;">Copy the data below and paste it into a new text file, then save it as <strong>velo-town-jobs.json</strong>. You can import it back using the Import Jobs button.</p>
+            <textarea id="exportTextarea" readonly style="width:100%; height:200px; font-family:monospace; font-size:11px; padding:10px; border:2px solid #A8B69B; border-radius:6px; background:#f9f8f2; resize:vertical;"></textarea>
+            <div style="display:flex; gap:10px; margin-top:12px;">
+                <button id="exportCopyBtn" onclick="copyExportData()" class="btn btn-primary">Copy to Clipboard</button>
+                <button onclick="closeExportModal()" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="delete-confirm-modal" id="deleteConfirmModal">
+        <div class="delete-confirm-content">
+            <h3>Delete this job?</h3>
+            <p>This action cannot be undone.</p>
+            <div class="delete-confirm-actions">
+                <button class="btn-cancel-delete" onclick="cancelDelete()">Cancel</button>
+                <button class="btn-confirm-delete" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Checklist templates
+        const checklistTemplates = {
+            initialContact: [
+                'Collect Contact Info',
+                'Approximate Scope Understood',
+                'Quote Visit Explained',
+                'Quote Visit Scheduled'
+            ],
+            quoteVisit: [
+                'Double-check Contact Info',
+                'Document Full Scope',
+                'Assess Surface Condition and Prepwork',
+                'Paint Preferences',
+                'Take Photos',
+                'Discuss Timeline',
+                'Create/Send Quote'
+            ],
+            waitingForDecision: [
+                'Followup Scheduled',
+                'Any Concerns/Questions to be addressed'
+            ],
+            declined: [
+                'Note Reasons for Decline'
+            ],
+            followupNextSeason: [
+                'Schedule Followup',
+                'Any Concerns/Questions to be addressed'
+            ],
+            preparation: [
+                'Quote approved',
+                'Discuss Paint Colours',
+                'Schedule Production Dates'
+            ],
+            scheduled: [
+                'Man Hours Assigned',
+                'Paint Ordered',
+                'Confirm Site Access, Bathroom Access'
+            ],
+            production: [
+                'Make Realistic Production Plan',
+                'Communicate with Homeowners Daily',
+                'Keep Jobsite Clean',
+                'Document any Change Orders or Unforeseen Extras'
+            ],
+            wrapup: [
+                'Final walkthrough with client',
+                'Touch-ups completed',
+                'Payment collected',
+                'Before/after photos taken',
+                'Review/testimonial requested',
+                'Send thank you'
+            ],
+            archived: []
+        };
+
+        // Initialize jobs array — loaded from Firestore on startup
+        let jobs = [];
+        let currentJobId = null;
+        let currentView = 'pipeline';
+        let currentCalendarMonth = new Date();
+        let jobToDelete = null;
+
+        // Migration runs after jobs are loaded from Firestore (see initApp)
+        function migrateJobs() {
+            jobs = jobs.map(job => {
+                if (typeof job.id === 'number') job = { ...job, id: 'job_' + job.id + '_migrated' };
+                if (!job.hasOwnProperty('dollarAmount')) job.dollarAmount = 0;
+                if (!job.hasOwnProperty('hours')) job.hours = 0;
+                if (!job.hasOwnProperty('notes')) job.notes = '';
+                if (!job.hasOwnProperty('order')) job.order = 0;
+                if (job.stage === 'estimateVisit') job.stage = 'quoteVisit';
+                if (!job.checklists) job.checklists = {};
+                const allStages = ['initialContact','quoteVisit','waitingForDecision','declined','followupNextSeason','preparation','scheduled','production','wrapup','archived'];
+                allStages.forEach(stage => {
+                    const oldChecklist = job.checklists[stage] || {};
+                    const newChecklist = {};
+                    (checklistTemplates[stage] || []).forEach(item => {
+                        newChecklist[item] = oldChecklist[item] || false;
+                    });
+                    job.checklists[stage] = newChecklist;
+                });
+                return job;
+            });
+        }
+
+        // Date helper functions
+        function isWeekend(date) {
+            const day = date.getDay();
+            return day === 0 || day === 6;
+        }
+
+        function addWorkdays(startDate, workdays) {
+            let date = new Date(startDate);
+            let daysAdded = 0;
+            
+            while (daysAdded < workdays) {
+                date.setDate(date.getDate() + 1);
+                if (!isWeekend(date)) {
+                    daysAdded++;
+                }
+            }
+            
+            return date;
+        }
+
+        function getWorkdaysBetween(startDate, endDate) {
+            let count = 0;
+            let current = new Date(startDate);
+            const end = new Date(endDate);
+            
+            while (current <= end) {
+                if (!isWeekend(current)) {
+                    count++;
+                }
+                current.setDate(current.getDate() + 1);
+            }
+            
+            return count;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function getDateString(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function isToday(dateStr) {
+            return dateStr === getDateString(new Date());
+        }
+
+        function isSameDay(date1, date2) {
+            return date1.getFullYear() === date2.getFullYear() &&
+                   date1.getMonth() === date2.getMonth() &&
+                   date1.getDate() === date2.getDate();
+        }
+
+        // Format dollar amount with commas and dollar sign
+        function formatDollarAmount(amount) {
+            if (!amount || amount === 0) return '$0';
+            return '$' + parseFloat(amount).toLocaleString('en-US', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Parse dollar amount from formatted string
+        function parseDollarAmount(formattedAmount) {
+            return parseFloat(formattedAmount.replace(/[$,]/g, '')) || 0;
+        }
+
+        // ── Firestore persistence ─────────────────────────────────────────
+
+        // Save a single job to Firestore
+        async function saveJob(job) {
+            try {
+                await window._fsSetDoc(window._fsDoc(window._db, 'jobs', job.id), job);
+            } catch(e) { console.error('Save error:', e); }
+        }
+
+        // Save all jobs (used after import)
+        async function saveAllJobs() {
+            for (const job of jobs) { await saveJob(job); }
+        }
+
+        // Called everywhere the old saveJobs() was called — saves just the changed job
+        // For simplicity we still call it as saveJobs() but save all dirty jobs
+        function saveJobs() {
+            // Find the most recently touched job and save it
+            // (In practice callers always modify one job then call saveJobs)
+            jobs.forEach(job => saveJob(job));
+        }
+
+        // Delete a job from Firestore
+        async function deleteJobFromDB(jobId) {
+            try {
+                await window._fsDeleteDoc(window._fsDoc(window._db, 'jobs', jobId));
+            } catch(e) { console.error('Delete error:', e); }
+        }
+
+        // Load all jobs from Firestore
+        async function loadJobsFromDB() {
+            try {
+                const snapshot = await window._fsGetDocs(window._fsCollection(window._db, 'jobs'));
+                jobs = [];
+                snapshot.forEach(docSnap => jobs.push(docSnap.data()));
+                migrateJobs();
+                // Save migrated versions back
+                await saveAllJobs();
+            } catch(e) {
+                console.error('Load error:', e);
+                jobs = [];
+            }
+        }
+
+        // Export — download as JSON file (works outside Claude iframe)
+        function exportJobs() {
+            const data = JSON.stringify(jobs, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url; a.download = 'velo-town-jobs.json'; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Import — upload JSON and push all jobs to Firestore
+        function importJobs(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (!Array.isArray(imported)) throw new Error('Invalid format');
+                    jobs = imported;
+                    migrateJobs();
+                    await saveAllJobs();
+                    renderBoard();
+                    renderCalendar();
+                    alert('Jobs imported successfully!');
+                } catch(err) { alert('Failed to import: ' + err.message); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // ── App initialisation ────────────────────────────────────────────
+        async function initApp() {
+            // Show a loading indicator while we fetch from Firestore
+            document.body.insertAdjacentHTML('afterbegin',
+                '<div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(61,68,55,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;color:white;font-size:20px;font-weight:700;letter-spacing:0.1em;">Loading jobs…</div>');
+
+            await loadJobsFromDB();
+
+            document.getElementById('loadingOverlay').remove();
+            setupDragAndDrop();
+            renderBoard();
+            renderCalendar();
+        }
+
+        // Wait for Firebase to be ready before initialising
+        window.addEventListener('firebaseReady', initApp);
+        // Fallback in case event already fired
+        if (window._db) initApp();
+
+        // Generate unique ID
+        function generateId() {
+            return 'job_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Initialize checklist for a job
+        function initializeChecklist(stage) {
+            const items = {};
+            checklistTemplates[stage].forEach(item => {
+                items[item] = false;
+            });
+            return items;
+        }
+
+        // Add new job
+        function addNewJob() {
+            const title = document.getElementById('jobTitle').value;
+            const address = document.getElementById('jobAddress').value;
+            if (!title) { alert('Please fill in the job title'); return; }
+
+            const stageJobs = jobs.filter(j => j.stage === 'initialContact');
+            const maxOrder = stageJobs.length ? Math.max(...stageJobs.map(j => j.order || 0)) : 0;
+
+            const newJob = {
+                id: generateId(),
+                title: title,
+                address: address || '',
+                stage: 'initialContact',
+                scheduledDate: null,
+                duration: 1,
+                dollarAmount: 0,
+                hours: 0,
+                notes: '',
+                order: maxOrder + 1,
+                checklists: {
+                    initialContact: initializeChecklist('initialContact'),
+                    quoteVisit: initializeChecklist('quoteVisit'),
+                    waitingForDecision: initializeChecklist('waitingForDecision'),
+                    declined: initializeChecklist('declined'),
+                    followupNextSeason: initializeChecklist('followupNextSeason'),
+                    preparation: initializeChecklist('preparation'),
+                    scheduled: initializeChecklist('scheduled'),
+                    production: initializeChecklist('production'),
+                    wrapup: initializeChecklist('wrapup'),
+                    archived: initializeChecklist('archived')
+                }
+            };
+            
+            jobs.push(newJob);
+            saveJobs();
+            renderBoard();
+            renderCalendar();
+            closeNewJobModal();
+            
+            document.getElementById('jobTitle').value = '';
+            document.getElementById('jobAddress').value = '';
+        }
+
+        // Toggle declined column
+        let showHiddenColumns = false;
+        let showArchived = false;
+
+        function toggleHiddenColumns() {
+            showHiddenColumns = !showHiddenColumns;
+            document.getElementById('declinedColumn').classList.toggle('hidden', !showHiddenColumns);
+            document.getElementById('followupColumn').classList.toggle('hidden', !showHiddenColumns);
+            document.getElementById('hiddenChevron').textContent = showHiddenColumns ? '‹' : '›';
+        }
+
+        function toggleArchived() {
+            showArchived = !showArchived;
+            document.getElementById('archivedColumn').classList.toggle('hidden', !showArchived);
+            document.getElementById('archivedChevron').textContent = showArchived ? '‹' : '›';
+        }
+
+        // View switching
+        function switchView(view) {
+            currentView = view;
+            
+            const pipelineView = document.getElementById('pipelineView');
+            const calendarView = document.getElementById('calendarView');
+            const buttons = document.querySelectorAll('.view-toggle-btn');
+            
+            if (view === 'pipeline') {
+                pipelineView.classList.remove('hidden');
+                calendarView.classList.remove('active');
+                buttons[0].classList.add('active');
+                buttons[1].classList.remove('active');
+            } else {
+                pipelineView.classList.add('hidden');
+                calendarView.classList.add('active');
+                buttons[0].classList.remove('active');
+                buttons[1].classList.add('active');
+                renderCalendar();
+            }
+        }
+
+        // Calendar navigation (legacy stubs — calendar now uses continuous scroll)
+        function changeMonth(delta) { /* no-op */ }
+        function goToToday() { scrollToToday(); }
+
+        // Show/hide modals
+        function showNewJobModal() {
+            document.getElementById('newJobModal').classList.add('active');
+        }
+
+        function closeNewJobModal() {
+            document.getElementById('newJobModal').classList.remove('active');
+        }
+
+        function closeJobModal() {
+            document.getElementById('jobModal').classList.remove('active');
+            currentJobId = null;
+        }
+
+        // Show job details
+        function showJobDetails(jobId) {
+            currentJobId = jobId;
+            const job = jobs.find(j => j.id === jobId);
+            if (!job) return;
+
+            const modal = document.getElementById('jobModal');
+            const modalBody = document.getElementById('jobModalBody');
+
+            const safeTitle   = (job.title   || '').replace(/"/g, '&quot;');
+            const safeAddress = (job.address  || '').replace(/"/g, '&quot;');
+            const safeNotes   = (job.notes    || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            let html = `
+                <div class="job-details">
+                    <div class="job-details-left">
+                        <input class="editable-title" type="text" value="${safeTitle}"
+                               onchange="updateTitle('${jobId}', this.value)" placeholder="Job title / client name">
+                        <input class="editable-address" type="text" value="${safeAddress}"
+                               onchange="updateAddress('${jobId}', this.value)" placeholder="Address">
+                    </div>
+                    <div class="job-details-right">
+                        <div class="job-metric">
+                            <label>Value:</label>
+                            <input type="text" value="${formatDollarAmount(job.dollarAmount || 0)}" 
+                                   onchange="updateDollarAmount('${jobId}', this.value)"
+                                   placeholder="$0">
+                        </div>
+                        <div class="job-metric">
+                            <label>Est. Man Hours:</label>
+                            <input type="number" min="0" step="0.5" value="${job.hours || 0}" 
+                                   onchange="updateHours('${jobId}', this.value)"
+                                   placeholder="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="notes-section">
+                    <h4>Notes</h4>
+                    <textarea placeholder="Add notes here…" onchange="updateNotes('${jobId}', this.value)">${safeNotes}</textarea>
+                </div>
+                
+                <div class="checklist">
+                    <h4>Checklist - ${getStageDisplayName(job.stage)}</h4>
+            `;
+            
+            const currentChecklist = job.checklists[job.stage];
+            Object.keys(currentChecklist).forEach((item, index) => {
+                const checked = currentChecklist[item];
+                const itemId = 'item_' + jobId + '_' + index;
+                const escapedItem = item.replace(/'/g, "\\'").replace(/"/g, '\\"');
+                html += `
+                    <div class="checklist-item">
+                        <input type="checkbox" id="${itemId}" ${checked ? 'checked' : ''} 
+                               onchange="toggleChecklistItem('${jobId}', '${job.stage}', '${escapedItem}')">
+                        <label for="${itemId}">${item}</label>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            // Show date and duration picker in preparation stage
+            if (job.stage === 'preparation') {
+                html += `
+                    <div class="date-section">
+                        <h4>📅 Schedule Production</h4>
+                        <label style="font-size: 14px; margin-bottom: 5px; display: block;">Start Date:</label>
+                        <input type="date" value="${job.scheduledDate || ''}" 
+                               onchange="updateScheduledDate('${jobId}', this.value)">
+                        <label style="font-size: 14px; margin-bottom: 5px; margin-top: 10px; display: block;">Duration (workdays):</label>
+                        <input type="number" min="1" value="${job.duration || 1}" 
+                               onchange="updateDuration('${jobId}', this.value)"
+                               style="margin-bottom: 0;">
+                    </div>
+                `;
+            }
+            
+            // Show scheduled info in other stages if it exists
+            if (job.scheduledDate && job.stage !== 'preparation') {
+                const endDate = addWorkdays(new Date(job.scheduledDate), job.duration - 1);
+                html += `
+                    <div class="date-section">
+                        <h4>📅 Schedule</h4>
+                        <p><strong>Start:</strong> ${formatDate(job.scheduledDate)}</p>
+                        <p><strong>Duration:</strong> ${job.duration} workday${job.duration > 1 ? 's' : ''}</p>
+                        <p><strong>End:</strong> ${formatDate(getDateString(endDate))}</p>
+                    </div>
+                `;
+            }
+            
+            html += `
+                <button class="delete-btn" id="deleteJobBtn">
+                    Delete Job
+                </button>
+            `;
+            
+            modalBody.innerHTML = html;
+            modal.classList.add('active');
+            
+            // Attach delete button event listener
+            console.log('Looking for delete button...');
+            const deleteBtn = document.getElementById('deleteJobBtn');
+            console.log('Delete button found:', deleteBtn);
+            if (deleteBtn) {
+                deleteBtn.onclick = function() {
+                    console.log('Delete button clicked! JobId:', jobId);
+                    deleteJob(jobId);
+                };
+                console.log('Event listener attached');
+            } else {
+                console.log('ERROR: Delete button not found!');
+            }
+        }
+
+        // Wrapper function for delete to avoid string escaping issues
+        function deleteJobHandler(jobId) {
+            deleteJob(jobId);
+        }
+
+        // Toggle checklist item
+        function toggleChecklistItem(jobId, stage, item) {
+            const job = jobs.find(j => j.id === jobId);
+            if (job && job.checklists[stage]) {
+                job.checklists[stage][item] = !job.checklists[stage][item];
+                saveJobs();
+            }
+        }
+
+        // Update dollar amount
+        function updateTitle(jobId, v) {
+            const job = jobs.find(j => j.id === jobId);
+            if (job) { job.title = v; saveJobs(); renderBoard(); renderCalendar(); }
+        }
+
+        function updateAddress(jobId, v) {
+            const job = jobs.find(j => j.id === jobId);
+            if (job) { job.address = v; saveJobs(); renderBoard(); }
+        }
+
+        function updateNotes(jobId, v) {
+            const job = jobs.find(j => j.id === jobId);
+            if (job) { job.notes = v; saveJobs(); }
+        }
+
+        function updateDollarAmount(jobId, amountStr) {
+            const job = jobs.find(j => j.id === jobId);
+            if (job) {
+                job.dollarAmount = parseDollarAmount(amountStr);
+                saveJobs();
+                renderBoard();
+                renderCalendar();
+            }
+        }
+
+        // Update hours
+        function updateHours(jobId, hours) {
+            const job = jobs.find(j => j.id === jobId);
+            if (job) {
+                job.hours = parseFloat(hours) || 0;
+                saveJobs();
+                renderBoard();
+                renderCalendar();
+            }
+        }
+
+        // Update scheduled date
+        function updateScheduledDate(jobId, date) {
+            const job = jobs.find(j => j.id === jobId);
+            if (job) {
+                job.scheduledDate = date;
+                saveJobs();
+                renderBoard();
+                renderCalendar();
+            }
+        }
+
+        // Update duration
+        function updateDuration(jobId, duration) {
+            const job = jobs.find(j => j.id === jobId);
+            if (job) {
+                job.duration = parseInt(duration) || 1;
+                saveJobs();
+                renderBoard();
+                renderCalendar();
+            }
+        }
+
+        // Delete job - show custom confirmation
+        function deleteJob(jobId) {
+            console.log('deleteJob called with ID:', jobId);
+            jobToDelete = jobId;
+            document.getElementById('deleteConfirmModal').classList.add('active');
+        }
+
+        function confirmDelete() {
+            if (jobToDelete) {
+                deleteJobFromDB(jobToDelete);
+                jobs = jobs.filter(j => j.id !== jobToDelete);
+                closeJobModal();
+                renderBoard();
+                renderCalendar();
+            }
+            document.getElementById('deleteConfirmModal').classList.remove('active');
+            jobToDelete = null;
+        }
+
+        function cancelDelete() {
+            console.log('Delete cancelled');
+            document.getElementById('deleteConfirmModal').classList.remove('active');
+            jobToDelete = null;
+        }
+
+        function getStageDisplayName(stage) {
+            return {
+                initialContact: 'Initial Contact',
+                quoteVisit: 'Quote Visit',
+                waitingForDecision: 'Waiting for Decision',
+                declined: 'Declined',
+                followupNextSeason: 'Follow-up Next Season',
+                preparation: 'Preparation',
+                scheduled: 'Scheduled',
+                production: 'Production',
+                wrapup: 'Wrap-up',
+                archived: 'Archived'
+            }[stage] || stage;
+        }
+
+        // Render the pipeline board
+        function renderBoard() {
+            const columns = document.querySelectorAll('.column-content');
+            columns.forEach(column => { column.innerHTML = ''; });
+
+            // Sort jobs by order within each stage
+            const sorted = [...jobs].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            sorted.forEach(job => {
+                const column = document.querySelector(`[data-stage="${job.stage}"]`);
+                if (!column) return;
+
+                const card = document.createElement('div');
+                card.className = 'job-card';
+                card.draggable = true;
+                card.dataset.jobId = job.id;
+
+                let cardHtml = `<h3>${job.title}</h3><p>${job.address || 'No address'}</p>`;
+                if (job.scheduledDate) {
+                    cardHtml += `<div class="scheduled-info">📅 ${formatDate(job.scheduledDate)} (${job.duration}d)</div>`;
+                }
+                card.innerHTML = cardHtml;
+
+                card.addEventListener('click', () => showJobDetails(job.id));
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+
+                column.appendChild(card);
+            });
+        }
+
+        // ─── Continuous-scroll calendar ──────────────────────────────────────
+
+        // How many months before/after today to render
+        const CAL_MONTHS_BEFORE = 3;
+        const CAL_MONTHS_AFTER  = 9;
+
+        // Drag-to-move state
+        let calDragJobId   = null;
+        let calDragOffset  = 0; // workday offset from job start when grab began
+
+        // Drag-to-resize state
+        let calResizeJobId       = null;
+        let calResizeStartCell   = null;
+        let calResizeInitialDur  = 0;
+        let calResizeStartDate   = null;
+
+        // For month-label update on scroll
+        let calScrollOuter = null;
+        let calMonthTops   = []; // [{month:'March 2026', top:N}, ...]
+
+        function renderCalendar() {
+            calScrollOuter = document.getElementById('calendarScrollOuter');
+            const inner    = document.getElementById('calendarScrollInner');
+            inner.innerHTML = '';
+            calMonthTops    = [];
+
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            const startMonth = new Date(today.getFullYear(), today.getMonth() - CAL_MONTHS_BEFORE, 1);
+
+            const totalMonths = CAL_MONTHS_BEFORE + 1 + CAL_MONTHS_AFTER;
+
+            for (let m = 0; m < totalMonths; m++) {
+                const monthDate = new Date(startMonth.getFullYear(), startMonth.getMonth() + m, 1);
+                const section   = buildMonthSection(monthDate, today);
+                inner.appendChild(section);
+                calMonthTops.push({
+                    label: monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                    top:   section.offsetTop
+                });
+            }
+
+            // After render, scroll today's month into view
+            scrollToToday(false);
+
+            // Listen for scroll to update month label
+            calScrollOuter.onscroll = updateMonthLabel;
+            updateMonthLabel();
+        }
+
+        function buildMonthSection(monthDate, today) {
+            const section = document.createElement('div');
+            section.className = 'calendar-month-section';
+            section.dataset.month = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            const heading = document.createElement('div');
+            heading.className = 'calendar-month-heading';
+            heading.textContent = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            section.appendChild(heading);
+
+            const grid = document.createElement('div');
+            grid.className = 'calendar-month-grid';
+
+            const firstDay     = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+            const lastDay      = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+            const daysInMonth  = lastDay.getDate();
+            const startDOW     = firstDay.getDay(); // 0=Sun
+
+            // Blank padding cells before 1st
+            for (let i = 0; i < startDOW; i++) {
+                const blank = document.createElement('div');
+                blank.className = 'calendar-day other-month';
+                grid.appendChild(blank);
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const date    = new Date(monthDate.getFullYear(), monthDate.getMonth(), d);
+                const dateStr = getDateString(date);
+
+                const cell = document.createElement('div');
+                cell.className = 'calendar-day';
+                cell.dataset.date = dateStr;
+
+                if (isWeekend(date)) cell.classList.add('weekend');
+                if (isToday(dateStr)) {
+                    cell.classList.add('today');
+                    cell.dataset.isToday = '1';
+                }
+
+                const numEl = document.createElement('div');
+                numEl.className = 'calendar-day-number';
+                numEl.textContent = d;
+                cell.appendChild(numEl);
+
+                const jobsCont = document.createElement('div');
+                jobsCont.className = 'calendar-jobs-container';
+                cell.appendChild(jobsCont);
+
+                // Drop target
+                cell.addEventListener('dragover',  calDayDragOver);
+                cell.addEventListener('dragenter', calDayDragEnter);
+                cell.addEventListener('dragleave', calDayDragLeave);
+                cell.addEventListener('drop',      calDayDrop);
+
+                // Populate job bars
+                jobs.forEach(job => {
+                    if (!job.scheduledDate) return;
+
+                    const jobStart = parseLocalDate(job.scheduledDate);
+                    const jobEnd   = addWorkdays(new Date(jobStart), job.duration - 1);
+
+                    if (date < jobStart || date > jobEnd) return;
+
+                    const isStart = isSameDay(date, jobStart);
+                    const isEnd   = isSameDay(date, jobEnd);
+
+                    const bar = document.createElement('div');
+                    bar.className = 'calendar-job';
+                    if (isStart) bar.classList.add('is-start');
+                    if (isEnd)   bar.classList.add('is-end');
+                    if (!isStart) bar.classList.add('continuation');
+
+                    bar.textContent = isStart ? job.title : '·';
+                    bar.title = job.title + (job.address ? '\n' + job.address : '');
+
+                    // Resize handle (shown only on end segment)
+                    const handle = document.createElement('div');
+                    handle.className = 'calendar-job-resize-handle';
+                    handle.textContent = '⠿';
+                    handle.addEventListener('mousedown', e => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        startCalResize(job.id, date, job.duration);
+                    });
+                    bar.appendChild(handle);
+
+                    // Drag to move (only from start)
+                    if (isStart) {
+                        bar.draggable = true;
+                        bar.addEventListener('dragstart', e => {
+                            calDragJobId  = job.id;
+                            calDragOffset = 0;
+                            bar.classList.add('dragging');
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', job.id);
+                        });
+                        bar.addEventListener('dragend', () => {
+                            bar.classList.remove('dragging');
+                            document.querySelectorAll('.calendar-day.drag-over')
+                                .forEach(el => el.classList.remove('drag-over'));
+                        });
+                    }
+
+                    // Click to open details
+                    bar.addEventListener('click', e => {
+                        if (e.target === handle) return;
+                        showJobDetails(job.id);
+                    });
+
+                    jobsCont.appendChild(bar);
+                });
+
+                grid.appendChild(cell);
+            }
+
+            section.appendChild(grid);
+            return section;
+        }
+
+        // ── Drag-to-move handlers ──────────────────────────────────────────
+        function calDayDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+
+        function calDayDragEnter(e) {
+            if (!this.classList.contains('other-month')) this.classList.add('drag-over');
+        }
+
+        function calDayDragLeave(e) { this.classList.remove('drag-over'); }
+
+        function calDayDrop(e) {
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+
+            if (!calDragJobId || this.classList.contains('other-month')) return;
+
+            const newDate = this.dataset.date;
+            const job = jobs.find(j => j.id === calDragJobId);
+            if (job && newDate) {
+                job.scheduledDate = newDate;
+                saveJobs();
+                renderBoard();
+                refreshCalendarBars(); // redraw bars only, no scroll
+            }
+
+            calDragJobId = null;
+        }
+
+        // ── Drag-to-resize (mousedown on handle → track mouse over cells) ──
+        function startCalResize(jobId, cellDate, initialDuration) {
+            calResizeJobId      = jobId;
+            calResizeStartDate  = new Date(cellDate);
+            calResizeInitialDur = initialDuration;
+
+            document.addEventListener('mouseover',  calResizeMouseOver);
+            document.addEventListener('mouseup',    endCalResize);
+        }
+
+        function calResizeMouseOver(e) {
+            const cell = e.target.closest('.calendar-day');
+            if (!cell || !cell.dataset.date) return;
+
+            const hoverDate = parseLocalDate(cell.dataset.date);
+            const job = jobs.find(j => j.id === calResizeJobId);
+            if (!job) return;
+
+            const startDate = parseLocalDate(job.scheduledDate);
+
+            let dur = 0;
+            if (hoverDate < startDate) { dur = 1; }
+            else {
+                let d = new Date(startDate);
+                while (d <= hoverDate) {
+                    if (!isWeekend(d)) dur++;
+                    d.setDate(d.getDate() + 1);
+                }
+            }
+            dur = Math.max(1, dur);
+
+            if (dur !== job.duration) {
+                job.duration = dur;
+                refreshCalendarBars(); // redraw bars only, no scroll
+            }
+        }
+
+        function endCalResize() {
+            if (calResizeJobId) {
+                saveJobs();
+                renderBoard();
+            }
+            calResizeJobId = null;
+            document.removeEventListener('mouseover', calResizeMouseOver);
+            document.removeEventListener('mouseup',   endCalResize);
+        }
+
+        // Redraw job bars in all visible month sections without rebuilding
+        // the calendar or touching the scroll position
+        function refreshCalendarBars() {
+            const inner = document.getElementById('calendarScrollInner');
+            if (!inner) return;
+            inner.querySelectorAll('.calendar-month-section').forEach(section => {
+                const monthLabel = section.dataset.month;
+                const monthDate  = new Date(monthLabel);
+                // Remove old bars
+                section.querySelectorAll('.calendar-jobs-container').forEach(c => { c.innerHTML = ''; });
+                // Re-populate bars for each day cell
+                section.querySelectorAll('.calendar-day:not(.other-month)').forEach(cell => {
+                    const dateStr = cell.dataset.date;
+                    if (!dateStr) return;
+                    const date = parseLocalDate(dateStr);
+                    const jobsCont = cell.querySelector('.calendar-jobs-container');
+                    if (!jobsCont) return;
+
+                    jobs.forEach(job => {
+                        if (!job.scheduledDate) return;
+                        const jobStart = parseLocalDate(job.scheduledDate);
+                        const jobEnd   = addWorkdays(new Date(jobStart), job.duration - 1);
+                        if (date < jobStart || date > jobEnd) return;
+
+                        const isStart = isSameDay(date, jobStart);
+                        const isEnd   = isSameDay(date, jobEnd);
+
+                        const bar = document.createElement('div');
+                        bar.className = 'calendar-job';
+                        if (isStart) bar.classList.add('is-start');
+                        if (isEnd)   bar.classList.add('is-end');
+                        if (!isStart) bar.classList.add('continuation');
+                        bar.textContent = job.title;
+                        bar.title = job.title + (job.address ? '\n' + job.address : '');
+
+                        const handle = document.createElement('div');
+                        handle.className = 'calendar-job-resize-handle';
+                        handle.textContent = '⠿';
+                        handle.addEventListener('mousedown', ev => {
+                            ev.stopPropagation(); ev.preventDefault();
+                            startCalResize(job.id, date, job.duration);
+                        });
+                        bar.appendChild(handle);
+
+                        if (isStart) {
+                            bar.draggable = true;
+                            bar.addEventListener('dragstart', ev => {
+                                calDragJobId = job.id;
+                                bar.classList.add('dragging');
+                                ev.dataTransfer.effectAllowed = 'move';
+                                ev.dataTransfer.setData('text/plain', job.id);
+                            });
+                            bar.addEventListener('dragend', () => {
+                                bar.classList.remove('dragging');
+                                document.querySelectorAll('.calendar-day.drag-over').forEach(el => el.classList.remove('drag-over'));
+                            });
+                        }
+
+                        bar.addEventListener('click', ev => {
+                            if (ev.target !== handle) showJobDetails(job.id);
+                        });
+
+                        jobsCont.appendChild(bar);
+                    });
+                });
+            });
+        }
+
+        // ── Scroll helpers ────────────────────────────────────────────────
+        function scrollToToday(smooth = true) {
+            const outer = document.getElementById('calendarScrollOuter');
+            const todayCell = outer ? outer.querySelector('[data-is-today="1"]') : null;
+            if (todayCell) {
+                todayCell.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant', block: 'center' });
+            }
+        }
+
+        function updateMonthLabel() {
+            const outer = document.getElementById('calendarScrollOuter');
+            if (!outer) return;
+            const scrollTop = outer.scrollTop;
+            // Find the last section whose top is above the scroll position
+            const sections = outer.querySelectorAll('.calendar-month-section');
+            let label = '';
+            sections.forEach(sec => {
+                if (sec.offsetTop - outer.offsetTop <= scrollTop + 60) {
+                    label = sec.dataset.month;
+                }
+            });
+            const labelEl = document.getElementById('calendarMonthLabel');
+            if (labelEl && label) labelEl.textContent = label;
+        }
+
+        // ── Parse date string as local (avoid UTC offset issues) ─────────
+        function parseLocalDate(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+
+        // Pipeline drag and drop — supports reordering within a column
+        let draggedElement = null;
+        let dragOverCard   = null;
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.dataset.jobId);
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.column-content').forEach(col => col.classList.remove('drag-over'));
+            document.querySelectorAll('.job-card').forEach(c => c.classList.remove('drag-above'));
+            draggedElement = null;
+            dragOverCard   = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            // Highlight the card we're hovering over for reorder indicator
+            const card = e.target.closest('.job-card');
+            if (card && card !== draggedElement) {
+                document.querySelectorAll('.job-card').forEach(c => c.classList.remove('drag-above'));
+                card.classList.add('drag-above');
+                dragOverCard = card;
+            }
+            return false;
+        }
+
+        function handleDragEnter(e) { this.classList.add('drag-over'); }
+        function handleDragLeave(e) {
+            if (!this.contains(e.relatedTarget)) {
+                this.classList.remove('drag-over');
+            }
+        }
+
+        function handleDrop(e) {
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+            document.querySelectorAll('.job-card').forEach(c => c.classList.remove('drag-above'));
+
+            if (!draggedElement) return false;
+
+            const jobId    = draggedElement.dataset.jobId;
+            const newStage = this.dataset.stage;
+            const job      = jobs.find(j => j.id === jobId);
+            if (!job) return false;
+
+            // If dropped onto a specific card, insert before it; otherwise append
+            if (dragOverCard && dragOverCard !== draggedElement && dragOverCard.closest('[data-stage]') === this) {
+                const targetId  = dragOverCard.dataset.jobId;
+                const targetJob = jobs.find(j => j.id === targetId);
+
+                // Reorder: reassign order values for this stage
+                const stageJobs = jobs
+                    .filter(j => j.stage === newStage && j.id !== jobId)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                const insertIdx = stageJobs.findIndex(j => j.id === targetId);
+                stageJobs.splice(insertIdx, 0, job);
+
+                stageJobs.forEach((j, i) => { j.order = i + 1; });
+                job.stage = newStage;
+            } else {
+                // Dropped into column with no specific target — append to end
+                job.stage = newStage;
+                const stageJobs = jobs.filter(j => j.stage === newStage && j.id !== jobId);
+                job.order = stageJobs.length + 1;
+            }
+
+            saveJobs();
+            renderBoard();
+            return false;
+        }
+
+        function setupDragAndDrop() {
+            document.querySelectorAll('.column-content').forEach(column => {
+                column.addEventListener('dragover',  handleDragOver);
+                column.addEventListener('dragenter', handleDragEnter);
+                column.addEventListener('dragleave', handleDragLeave);
+                column.addEventListener('drop',      handleDrop);
+            });
+        }
+
+    </script>
+</body>
+</html>
